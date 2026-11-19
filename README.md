@@ -4,7 +4,7 @@
 
 A tower defense game where you protect a hospital's network. Infected packets travel from the Internet toward the hospital's files, and you build security tools to stop them. It is styled as a 90s desktop that gets taken over by Matrix-style code as you lose.
 
-**Play it:** `https://<your-username>.github.io/<repo-name>/` *(replace after enabling GitHub Pages)*
+
 
 ## How to play
 
