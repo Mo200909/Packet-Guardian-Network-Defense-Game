@@ -1,0 +1,447 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Packet Guardian: Hospital Network Defense</title>
+<style>
+/* ===== Page theme tokens (light/dark), safe areas, and 90s desktop chrome (beveled gray windows on teal) ===== */
+:root{--bg:#008080;--win:#c0c0c0;--hi:#ffffff;--lt:#dfdfdf;--lo:#808080;--dk:#000000;--fg:#000000;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#003c3c;color-scheme:dark;}}
+:root[data-theme="dark"]{--bg:#003c3c;color-scheme:dark;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+*,*::before,*::after{box-sizing:inherit;}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:Tahoma,"Microsoft Sans Serif","MS Sans Serif",Arial,sans-serif;font-size:13px;}
+.wrap{max-width:990px;margin:0 auto;padding:14px 10px 28px;}
+.win{background:var(--win);border:2px solid;border-color:var(--hi) var(--dk) var(--dk) var(--hi);box-shadow:inset -1px -1px 0 var(--lo),inset 1px 1px 0 var(--lt);padding:3px;}
+.title{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(90deg,#000080,#1084d0);color:#fff;font-weight:700;padding:3px 4px 3px 6px;}
+.title span{display:inline-block;width:16px;height:14px;margin-left:2px;background:var(--win);border:1px solid;border-color:var(--hi) var(--dk) var(--dk) var(--hi);}
+.body{padding:8px;}
+.sub{margin:0 0 8px;}
+canvas{display:block;width:100%;max-width:100%;height:auto;border:2px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);touch-action:none;cursor:crosshair;background:#008080;}
+.bar{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 8px;}
+button{font:inherit;padding:5px 12px;background:var(--win);color:#000;border:2px solid;border-color:var(--hi) var(--dk) var(--dk) var(--hi);box-shadow:inset -1px -1px 0 var(--lo),inset 1px 1px 0 var(--lt);border-radius:0;cursor:pointer;}
+button:active,button.active{border-color:var(--dk) var(--hi) var(--hi) var(--dk);box-shadow:inset 1px 1px 0 var(--lo);}
+button.active{font-weight:700;}
+button.poor{color:var(--lo);}
+button:disabled{color:var(--lo);text-shadow:1px 1px 0 var(--hi);cursor:default;}
+button[hidden]{display:none;}
+button:focus-visible{outline:1px dotted #000;outline-offset:-5px;}
+.panel{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:38px;margin:0 0 8px;padding:4px 8px;border:2px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);}
+.panel span{margin-right:6px;}
+.help{background:#fff;border:2px solid;border-color:var(--lo) var(--hi) var(--hi) var(--lo);padding:6px 12px;line-height:1.5;}
+.help p{margin:4px 0;max-width:80ch;}
+</style>
+</head>
+<body>
+<div class="wrap">
+ <div class="win">
+  <div class="title">Packet Guardian: Hospital Network Defense<div><span></span><span></span><span></span></div></div>
+  <div class="body">
+  <p class="sub">Keep a hospital’s network clean while infected packets try to get in.</p>
+  <canvas id="game" width="960" height="560" aria-label="Packet Guardian tower defense game"></canvas>
+  <div class="bar">
+    <button id="bFW" class="active">Firewall 50 (1)</button>
+    <button id="bFL">Filter 70 (2)</button>
+    <button id="bRL">Rate limiter 60 (3)</button>
+    <button id="bHP">Honeypot 80 (4)</button>
+    <button id="bWave" disabled>Start wave</button>
+    <button id="bSpd">Speed 1x</button>
+    <button id="bSnd">Sound on</button>
+    <button id="bRst">Restart</button>
+  </div>
+  <div class="bar"><button id="sBK">Backup server 120</button><button id="sEM">Email filter 60</button><button id="sSI">SIEM 90</button></div>
+  <div class="panel"><span id="pInfo">Click a placed tower to upgrade or sell it.</span><button id="bUp" hidden>Upgrade</button><button id="bSell" hidden>Sell</button></div>
+  <div class="help">
+    <p><strong>Firewall</strong> blocks packets on dangerous ports: Telnet 23, SMB 445 and RDP 3389.</p>
+    <p><strong>Filter</strong> inspects what’s inside packets. It stops malware disguised as normal traffic and opens encrypted tunnels, which split into the packets hidden inside.</p>
+    <p><strong>Rate limiter</strong> slows all traffic passing through its zone so other towers get more shots, and drops DDoS flood packets several at a time.</p>
+    <p><strong>Honeypot</strong> is a decoy server. Infected packets that pass near it get lured off the path and trapped, earning credits as intel. Normal traffic ignores it, because real users never touch a decoy. It can’t catch DDoS floods or ransomware.</p>
+    <p><strong>Services</strong> are bought once. A <strong>backup server</strong> keeps offline copies, so when ransomware hits you can restore instead of paying, at the cost of your defenses pausing for 5 seconds. An <strong>email filter</strong> scans attachments and quarantines dangerous ones. A <strong>SIEM</strong> collects alerts in one log and forecasts the next wave.</p>
+    <p><strong>DDoS attacks</strong> hit in waves 3 and 5: a flood of small orange packets. Each one does little damage, but the flood overloads the network and slows every tower’s firing. Rate limiters are the main defense. Firewalls help a little.</p>
+    <p>Stopping bad packets earns credits. Spend them on towers and upgrades (up to level 3). Click a packet to hit it by hand, but destroying a good packet is a false positive. Waves 4 and 6 end with a ransomware payload that every attacking tower can damage. If it reaches the network, it locks your files and demands a ransom: pay everything you have, even if that puts you in debt, or refuse and end the game. While you’re in debt you can’t build or upgrade.</p>
+    <p><strong>Files</strong> on the left are what attackers want. Each breach corrupts one of them. Click a folder to open it and see what’s left. When all three are gone, the hospital goes offline.</p>
+  </div>
+  </div>
+ </div>
+</div>
+<script>
+// ===== Canvas setup and shared helpers (colors, rounded rects, random picks) =====
+const W=960,H=560,CELL=40,MAX_WAVE=6;
+const cv=document.getElementById('game'),ctx=cv.getContext('2d');
+function fitCanvas(){const dpr=Math.min(window.devicePixelRatio||1,2);cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);}
+fitCanvas();
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const GLYPHS='01アイウエオカキクケコサシスセソタチツテトナニヌネ#$%&<>/=+';
+const rg=()=>GLYPHS[Math.floor(Math.random()*GLYPHS.length)];
+function hexRGB(h){const n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];}
+function mixC(a,b,t,al=1){const A=hexRGB(a),B=hexRGB(b);const c=A.map((v,i)=>Math.round(v+(B[i]-v)*Math.max(0,Math.min(1,t))));return`rgba(${c[0]},${c[1]},${c[2]},${al})`;}
+function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+// ===== Path: the route packets travel from the Internet to the hospital network =====
+const PATH=[[0,110],[250,110],[250,430],[510,430],[510,190],[740,190],[740,300],[858,300]];
+const SEG=[];let PATH_LEN=0;
+for(let i=0;i<PATH.length-1;i++){const[x1,y1]=PATH[i],[x2,y2]=PATH[i+1];const len=Math.hypot(x2-x1,y2-y1);SEG.push({x1,y1,x2,y2,len,start:PATH_LEN});PATH_LEN+=len;}
+function posAt(d){for(const s of SEG){if(d<=s.start+s.len){const t=(d-s.start)/s.len;return{x:s.x1+(s.x2-s.x1)*t,y:s.y1+(s.y2-s.y1)*t};}}const l=PATH[PATH.length-1];return{x:l[0],y:l[1]};}
+function distToPath(x,y){let m=1e9;for(const s of SEG){const dx=s.x2-s.x1,dy=s.y2-s.y1;let t=((x-s.x1)*dx+(y-s.y1)*dy)/(s.len*s.len);t=Math.max(0,Math.min(1,t));m=Math.min(m,Math.hypot(x-(s.x1+dx*t),y-(s.y1+dy*t)));}return m;}
+function tracePath(){ctx.beginPath();ctx.moveTo(PATH[0][0],PATH[0][1]);for(let i=1;i<PATH.length;i++)ctx.lineTo(PATH[i][0],PATH[i][1]);}
+
+// ===== Packet and tower rules: what each tower can hit, costs, and level stats =====
+const GOOD_TYPES=[{label:'HTTPS 443',port:443},{label:'DNS 53',port:53},{label:'HL7 2575',port:2575},{label:'DICOM 104',port:104}];
+const BAD_PORT=[{label:'Telnet 23',port:23},{label:'SMB 445',port:445},{label:'RDP 3389',port:3389}];
+const BAD_SIG=[{label:'HTTPS 443',port:443},{label:'HL7 2575',port:2575}];
+const TOWER={
+  firewall:{name:'Firewall',cost:50,range:[95,110,125],cd:[0.9,0.65,0.45],dmg:[1,1,2],match:p=>p.kind==='port'||p.kind==='boss'||p.kind==='ddos'},
+  filter:{name:'Filter',cost:70,range:[85,95,110],cd:[1.3,0.95,0.7],dmg:[1,1,2],match:p=>p.kind==='sig'||p.kind==='tunnel'||p.kind==='boss'},
+  honeypot:{name:'Honeypot',cost:80,range:[80,95,110],cd:[1.6,1.2,0.85]},
+  limiter:{name:'Rate limiter',cost:60,range:[75,90,105],slow:[0.55,0.42,0.3],drop:[2,3,4],dropCd:0.35}
+};
+const UP_COST=[60,100];
+const SERVICES={backup:{name:'Backup server',cost:120},mail:{name:'Email filter',cost:60},siem:{name:'SIEM',cost:90}};
+const FACE_NAMES=['Strong','Steady','Weakened','Sad','Hopeless'];
+function faceState(h){return h>80?0:h>60?1:h>40?2:h>20?3:4;}
+
+// ===== Game state and reset =====
+let S,time=0;
+let RAIN=[];
+function initRain(){RAIN=[];for(let i=0;i<Math.ceil(W/16);i++)RAIN.push({x:i*16+8,y:Math.random()*H,sp:60+Math.random()*120,ch:Array.from({length:14},rg)});}
+function reset(){S={svc:{},siem:[],restoreT:0,restores:0,mailQ:false,loveWave:2+Math.floor(Math.random()*4),mail:false,mailOpen:false,loveT:0,mode:'title',wave:0,health:100,score:0,credits:180,packets:[],towers:[],beams:[],parts:[],texts:[],spots:[],queue:[],spawnT:0,delivered:0,blocked:0,falsePos:0,sel:'firewall',picked:null,files:[100,100,100],openFile:null,hover:null,shake:0,speed:1};initRain();updateUI();}
+const corr=()=>S.mode==='lost'?1:1-S.health/100;
+
+// ===== Audio: upbeat robotic loop and sound effects, all routed through a distortion that grows as health falls =====
+let actx=null,master=null,shaper=null,lp=null,soundOn=true,nextT=0,step=0;
+const BPM=126,STEP=60/BPM/4,ARP=[0,7,12,7,4,7,12,16,0,7,12,7,5,9,12,14],ROOTS=[57,53,60,55];
+function curve(k){const n=1024,a=new Float32Array(n);for(let i=0;i<n;i++){const x=i*2/n-1;a[i]=(1+k)*x/(1+k*Math.abs(x));}return a;}
+function initAudio(){if(actx)return;const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;actx=new AC();master=actx.createGain();master.gain.value=soundOn?0.45:0;shaper=actx.createWaveShaper();shaper.oversample='2x';lp=actx.createBiquadFilter();lp.type='lowpass';shaper.connect(lp);lp.connect(master);master.connect(actx.destination);setDistortion(0);nextT=actx.currentTime+0.1;}
+function setDistortion(c){if(!actx)return;shaper.curve=curve(c*c*80);lp.frequency.setTargetAtTime(9000-c*7000,actx.currentTime,0.2);}
+const mtof=m=>440*Math.pow(2,(m-69)/12);
+function tone(f,t,dur,type,vol){const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=f;o.detune.value=(Math.random()*2-1)*corr()*120;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.008);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);o.connect(g);g.connect(shaper);o.start(t);o.stop(t+dur+0.03);}
+function noise(t,dur,vol){const len=Math.max(1,Math.floor(actx.sampleRate*dur)),b=actx.createBuffer(1,len,actx.sampleRate),d=b.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;const s=actx.createBufferSource(),g=actx.createGain();s.buffer=b;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);s.connect(g);g.connect(shaper);s.start(t);}
+function tickMusic(){if(!actx||!soundOn)return;const now=actx.currentTime;if(nextT<now-0.2)nextT=now+0.05;while(nextT<now+0.12){playStep(step,nextT);nextT+=STEP;step=(step+1)%64;}}
+function playStep(s,t){const c=corr();if(Math.random()<c*0.3)return;const root=ROOTS[Math.floor(s/16)];tone(mtof(root+12+ARP[s%16]),t,STEP*0.7,'square',0.035);if(s%4===0)tone(mtof(root-12),t,STEP*3.2,'triangle',0.14);if(s%8===4)noise(t,0.04,0.05);if(s%16===0)tone(mtof(root+24),t,STEP*2,'sine',0.04);}
+const sfx={
+  beep(){if(!actx)return;const t=actx.currentTime;tone(988,t,0.06,'sine',0.2);tone(1480,t+0.06,0.07,'sine',0.16);},
+  tick(){if(!actx)return;tone(660,actx.currentTime,0.04,'square',0.06);},
+  disconnect(){if(!actx)return;const t=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();o.type='sawtooth';o.frequency.setValueAtTime(720,t);o.frequency.exponentialRampToValueAtTime(55,t+0.5);g.gain.setValueAtTime(0.2,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.55);o.connect(g);g.connect(shaper);o.start(t);o.stop(t+0.6);noise(t+0.5,0.08,0.12);},
+  error(){if(!actx)return;const t=actx.currentTime;tone(170,t,0.14,'square',0.1);tone(120,t+0.1,0.18,'square',0.1);},
+  place(){if(!actx)return;const t=actx.currentTime;tone(523,t,0.06,'triangle',0.16);tone(784,t+0.06,0.09,'triangle',0.16);},
+  alarm(){if(!actx)return;const t=actx.currentTime;for(let i=0;i<4;i++){tone(880,t+i*0.22,0.1,'square',0.12);tone(660,t+i*0.22+0.11,0.1,'square',0.12);}},
+  ransom(){if(!actx)return;const t=actx.currentTime;[220,196,174,147,110].forEach((f,i)=>tone(f,t+i*0.18,0.35,'sawtooth',0.12));},
+  upgrade(){if(!actx)return;const t=actx.currentTime;[523,659,784,1047].forEach((f,i)=>tone(f,t+i*0.06,0.08,'triangle',0.15));}
+};
+
+// ===== Packets: building each wave's queue and creating good, bad, disguised, tunnel and ransomware packets =====
+function waveCfg(w){return{count:8+w*4,bad:0.35+0.06*w,sig:0.2+0.07*w,tunnel:w>=2?0.12+0.03*w:0,speed:60+w*10,interval:Math.max(0.45,1.05-w*0.1)};}
+function buildQueue(w){const c=waveCfg(w),q=[];for(let i=0;i<c.count;i++){if(Math.random()>=c.bad){q.push('good');continue;}const r=Math.random();q.push(r<c.tunnel?'tunnel':r<c.tunnel+c.sig?'sig':'port');}if(w===3||w===5){const at=Math.floor(q.length/2),n=w===3?26:38;q.splice(at,0,...Array(n).fill('ddos'));}if(w===4||w===MAX_WAVE)q.push('boss');return q;}
+function makePacket(kind,d,speed){const p={kind,d,speed,hp:1,maxHp:1,r:13,ph:Math.random()*6.28,glyph:rg(),flash:0,slow:1,leak:15,port:0,label:''};let t;
+  if(kind==='good'){t=pick(GOOD_TYPES);p.leak=0;}
+  else if(kind==='port')t=pick(BAD_PORT);
+  else if(kind==='sig')t=pick(BAD_SIG);
+  else if(kind==='ddos'){t={label:'',port:80};p.r=8;p.leak=3;p.speed=speed*1.15;}
+  else if(kind==='tunnel'){t={label:'Tunnel 443',port:443};p.hp=p.maxHp=2;p.r=16;p.leak=25;}
+  else{const big=S.wave>=MAX_WAVE;t={label:'Ransomware',port:0};p.glyph='$';p.hp=p.maxHp=big?30:14;p.r=big?26:21;p.leak=big?60:40;p.speed=speed*0.5;}
+  p.port=t.port;p.label=t.label;return p;}
+
+// ===== Game logic: waves, movement and slowing, towers firing, damage, leaks, win/lose =====
+function float(x,y,txt,col,life=1.2){S.texts.push({x:Math.max(130,Math.min(W-130,x)),y,txt,col,life,max:life});}
+function burst(x,y,col,n=10){for(let i=0;i<n;i++){const a=Math.random()*6.28,s=40+Math.random()*90;S.parts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:0.45,col});}}
+function startWave(){if(S.mode!=='build'||S.ransom)return;S.wave++;if(S.wave===S.loveWave&&!S.mailUsed){S.mail=true;S.mailQ=!!S.svc.mail;setTimeout(()=>{if(S.mail&&S.mode==='wave'){float(150,440,S.mailQ?'Email filter quarantined an attachment':'You have new mail','#000080',2.2);sfx.place();if(S.mailQ)siemLog('Attachment quarantined');}},2500);}S.ddosWarned=false;S.congest=0;S.mode='wave';S.queue=(S.nextQW===S.wave&&S.nextQ)||buildQueue(S.wave);S.nextQ=null;siemLog(`Wave ${S.wave} started`);S.spawnT=0;float(W/2,H/2,`Wave ${S.wave} incoming`,'#000080',1.6);updateUI();}
+function hit(p,dmg,tower){const q=posAt(p.d);if(tower)S.beams.push({x1:tower.x,y1:tower.y,x2:q.x,y2:q.y,life:0.15,col:tower.type==='firewall'?'#ff4040':tower.type==='limiter'?'#ffff00':'#00ffff'});
+  p.hp-=dmg;p.flash=0.12;if(p.hp<=0)destroy(p,tower);else{burst(q.x,q.y,'#ffffff',4);sfx.tick();}}
+function destroy(p,tower){S.packets=S.packets.filter(x=>x!==p);const q=posAt(p.d);burst(q.x,q.y,p.kind==='port'||p.kind==='boss'?'#9cff12':'#ffffff',p.kind==='boss'?30:10);S.blocked++;
+  S.credits+=(p.kind==='boss'?50:p.kind==='tunnel'?6:p.kind==='ddos'?1:4)+(tower?0:2);S.score+=p.kind==='boss'?100:p.kind==='ddos'?2:tower?5:8;
+  if(!tower)float(q.x,q.y-22,'Found it','#000080');
+  if(p.kind==='tunnel'){for(const k of[-9,9])S.packets.push(makePacket(Math.random()<0.5?'port':'sig',p.d+k,p.speed));float(q.x,q.y-22,'Tunnel opened','#000080');}
+  if(p.kind==='boss'){for(let i=0;i<6;i++)S.packets.push(makePacket(i%2?'port':'sig',p.d-30+i*12,p.speed*2.2));float(q.x,q.y-30,'Ransomware stopped','#000080',1.6);S.shake=0.25;}
+  if(p.kind==='ddos')sfx.tick();else sfx.beep();updateUI();}
+function falsePositive(p){S.packets=S.packets.filter(x=>x!==p);const q=posAt(p.d);S.score-=10;S.credits=Math.max(0,S.credits-10);S.falsePos++;float(q.x,q.y-22,'False positive −10','#c00000');sfx.error();updateUI();}
+function leak(p){const before=S.files.slice();let dmg=p.leak*3,first=null;
+  while(dmg>0){const alive=[0,1,2].filter(i=>S.files[i]>0);if(!alive.length)break;const i=first===null?pick(alive):alive[0];if(first===null)first=i;const d=Math.min(dmg,S.files[i]);S.files[i]-=d;dmg-=d;if(i===first)S.lastHit=d;}
+  S.health=Math.max(0,(S.files[0]+S.files[1]+S.files[2])/3);const fi=ICONS[first===null?0:first];
+  S.beams.push({x1:850,y1:300,x2:fi.x,y2:fi.y,life:0.5,col:'#9cff12'});S.spots.push({x:845,r:10,max:220+S.spots.length*70,str:0.45},{x:fi.x,r:10,max:110,str:0.35});
+  siemLog(`Breach: ${fi.l}`);S.shake=0.35;float(fi.x+80,fi.y-28,S.files[first===null?0:first]<=0?`${fi.l} corrupted`:`${fi.l} −${Math.round(S.lastHit||0)}%`,'#c00000');sfx.disconnect();setDistortion(corr());
+  if(S.health<=0){S.mode='lost';S.picked=null;S.openFile=null;setDistortion(1);updateUI();}}
+// ===== Ransom: pay everything (debt allowed) to decrypt the files, or refuse and shut down =====
+function siemLog(m){S.siem.push(m);if(S.siem.length>20)S.siem.shift();}
+function restoreBackup(){S.ransom=null;S.mode='wave';S.restoreT=5;S.restores++;
+  if(Math.random()<0.25){S.restoresFailed=(S.restoresFailed||0)+1;siemLog('Backup restore incomplete');float(W/2,H/2-24,'Backup was incomplete. Some data could not be restored.','#c00000',3);leak({leak:S.wave>=MAX_WAVE?25:15,kind:'boss'});}
+  else{siemLog('Restored from backup');float(W/2,H/2,'Restoring from offline backup. Defenses paused 5 seconds.','#000080',3);sfx.upgrade();}updateUI();}
+function demandRansom(){siemLog('Ransomware detected');S.mode='ransom';S.picked=null;S.openFile=null;S.ransom={amt:100*S.wave-100,t:0,secs:86399-Math.floor(Math.random()*600)};S.shake=0.4;sfx.ransom();updateUI();}
+function payRansom(){const a=S.ransom.amt;S.credits-=a;S.ransomsPaid=(S.ransomsPaid||0)+1;S.ransom=null;S.mode='wave';const broken=Math.random()<0.4;
+  const debt=S.credits<0?` You are ${-S.credits} credits in debt.`:'';
+  if(broken){S.keysFailed=(S.keysFailed||0)+1;siemLog('Ransom key failed');float(W/2,H/2-24,`Paid ${a}, but the key only partly worked.${debt}`,'#c00000',3);leak({leak:S.wave>=MAX_WAVE?40:25,kind:'boss'});}
+  else{float(W/2,H/2,`Paid ${a}. Files decrypted.${debt}`,'#c00000',2.6);sfx.disconnect();}updateUI();}
+function refuseRansom(){S.ransom=null;S.files=[0,0,0];S.health=0;S.lostReason='refused';S.mode='lost';setDistortion(1);updateUI();}
+// ===== Easter egg: ILOVEYOU (May 2000). Opening the attachment overwrites files and mails itself onward =====
+const MAIL={x:160,y:478};
+function openLoveLetter(){if(S.mailQ){S.mail=false;S.mailUsed=true;S.mailOpen='q';S.picked=null;S.openFile=null;updateUI();return;}
+  siemLog('ILOVEYOU worm opened');S.mail=false;S.mailUsed=true;S.mailOpen=true;S.loveT=7;S.picked=null;S.openFile=null;
+  for(let i=0;i<3;i++)S.files[i]=Math.max(0,S.files[i]-25);S.health=Math.max(0,(S.files[0]+S.files[1]+S.files[2])/3);setDistortion(corr());
+  if(S.mode==='wave')for(let i=0;i<4;i++)S.packets.push(makePacket('port',-30-i*25,waveCfg(S.wave).speed));
+  S.shake=0.4;sfx.ransom();if(S.health<=0){S.lostReason='love';S.mode='lost';S.mailOpen=false;setDistortion(1);}updateUI();}
+function endWave(){if(S.wave>=MAX_WAVE){S.mode='won';}else{S.mode='build';S.nextQW=S.wave+1;S.nextQ=buildQueue(S.wave+1);const bonus=40+10*S.wave;S.credits+=bonus;float(W/2,H/2,`Wave cleared. +${bonus} credits`,'#000080',1.8);}updateUI();}
+function update(dt){
+  time+=dt;if(S.ransom)S.ransom.t+=dt;const c=corr();
+  for(const col of RAIN){col.y+=col.sp*dt*(0.5+c);if(col.y-16*col.ch.length>H)col.y=-Math.random()*150;if(Math.random()<dt*3)col.ch[Math.floor(Math.random()*col.ch.length)]=rg();}
+  for(const s of S.spots)s.r=Math.min(s.max,s.r+dt*70);
+  S.parts=S.parts.filter(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;return p.life>0;});
+  S.texts=S.texts.filter(t=>{t.y-=22*dt;t.life-=dt;return t.life>0;});
+  S.beams=S.beams.filter(b=>(b.life-=dt)>0);
+  S.shake=Math.max(0,S.shake-dt);S.loveT=Math.max(0,S.loveT-dt);
+  if(S.mode!=='wave')return;
+  const cfg=waveCfg(S.wave);
+  if(S.queue.length){S.spawnT-=dt;if(S.spawnT<=0){const k=S.queue.shift();S.packets.push(makePacket(k,-10,cfg.speed*(0.9+Math.random()*0.2)));S.spawnT=S.queue[0]==='boss'?2:S.queue[0]==='ddos'?(k==='ddos'?0.13:1.5):cfg.interval;if(k==='ddos'&&!S.ddosWarned){S.ddosWarned=true;siemLog('DDoS flood started');float(W/2,60,'DDoS attack: traffic flood incoming','#c00000',2.4);sfx.alarm();}}}
+  const nD=S.packets.filter(p=>p.kind==='ddos'&&p.d>0).length;S.congest=Math.min(1,nD/20);
+  const lims=S.towers.filter(t=>t.type==='limiter');
+  for(const p of S.packets){let f=1;if(p.d>0){const q=posAt(p.d);for(const t of lims)if(Math.hypot(q.x-t.x,q.y-t.y)<=TOWER.limiter.range[t.lvl-1])f=Math.min(f,TOWER.limiter.slow[t.lvl-1]);}
+    p.slow=f;p.d+=p.speed*f*dt;p.ph+=dt*6;p.flash=Math.max(0,p.flash-dt);
+    if((p.kind==='port'||p.kind==='boss')&&p.d>0&&Math.random()<dt*(p.kind==='boss'?20:7)){const q=posAt(p.d);S.parts.push({x:q.x+(Math.random()-0.5)*p.r,y:q.y,vx:0,vy:30,life:0.8,col:'#9cff12',ch:rg()});}}
+  for(let i=S.packets.length-1;i>=0;i--){const p=S.packets[i];if(p.d>=PATH_LEN){S.packets.splice(i,1);if(p.kind==='good'){S.score+=2;S.credits+=2;S.delivered++;}else if(p.kind==='boss'){demandRansom();return;}else{leak(p);if(S.mode==='lost')return;}}}
+  for(const t of S.towers){if(t.type!=='limiter'||S.restoreT>0)continue;t.cd-=dt;if(t.cd>0)continue;const L=TOWER.limiter,rng=L.range[t.lvl-1];
+    const fl=S.packets.filter(p=>p.kind==='ddos'&&p.d>0&&(q=>Math.hypot(q.x-t.x,q.y-t.y)<=rng)(posAt(p.d))).slice(0,L.drop[t.lvl-1]);
+    if(fl.length){t.cd=L.dropCd;fl.forEach(p=>hit(p,1,t));}}
+  if(S.restoreT>0)S.restoreT=Math.max(0,S.restoreT-dt);
+  for(const t of S.towers){if(t.type!=='honeypot'||S.restoreT>0)continue;t.cd-=dt;if(t.cd>0)continue;const HP=TOWER.honeypot,rng=HP.range[t.lvl-1];
+    const p=S.packets.find(p=>p.d>0&&(p.kind==='port'||p.kind==='sig'||p.kind==='tunnel')&&(q=>Math.hypot(q.x-t.x,q.y-t.y)<=rng)(posAt(p.d)));
+    if(p){t.cd=HP.cd[t.lvl-1];const q=posAt(p.d);S.packets=S.packets.filter(x=>x!==p);S.beams.push({x1:q.x,y1:q.y,x2:t.x,y2:t.y,life:0.3,col:'#ffb000'});burst(t.x,t.y,'#ffb000',8);S.credits+=6;S.score+=6;S.blocked++;siemLog(`Honeypot trapped ${p.label}`);float(t.x,t.y-30,'+6 intel','#000080',1);sfx.beep();updateUI();}}
+  for(const t of S.towers){if(t.type==='limiter'||t.type==='honeypot'||S.restoreT>0)continue;t.cd-=dt*(1-0.6*(S.congest||0));if(t.cd>0)continue;const def=TOWER[t.type],rng=def.range[t.lvl-1];let target=null,best=-1;
+    for(const p of S.packets){if(p.d<0||!def.match(p))continue;const q=posAt(p.d);if(Math.hypot(q.x-t.x,q.y-t.y)<=rng+p.r*0.5&&p.d>best){best=p.d;target=p;}}
+    if(target){t.cd=def.cd[t.lvl-1];hit(target,def.dmg[t.lvl-1],t);}}
+  if(!S.queue.length&&!S.packets.length)endWave();
+}
+
+// ===== Input: placing, selecting, upgrading and selling towers, clicking packets, buttons and keyboard =====
+function toLocal(e){const r=cv.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}
+const snap=v=>Math.floor(v/CELL)*CELL+CELL/2;
+function canPlace(x,y){if(x>820&&y>408)return false;if(S.mail&&Math.abs(x-MAIL.x)<50&&Math.abs(y-MAIL.y-6)<40)return false;if(x<20||x>W-20||y<20||y>H-48)return false;if(x>820&&y<180)return false;if(x<110&&y>160&&y<460)return false;if(x>840&&y>195&&y<405)return false;if(distToPath(x,y)<36)return false;return!S.towers.some(t=>Math.hypot(t.x-x,t.y-y)<36);}
+function boot(){S.nextQW=1;S.nextQ=buildQueue(1);initAudio();if(actx&&actx.state==='suspended')actx.resume();S.mode='build';float(W/2,H/2,'Place towers, then start wave 1','#000080',2);updateUI();}
+function upgrade(){const t=S.picked;if(!t||t.lvl>=3)return;const cost=UP_COST[t.lvl-1];if(S.credits<cost){float(t.x,t.y-30,`Need ${cost-S.credits} more credits`,'#c00000');sfx.error();return;}
+  S.credits-=cost;t.spent+=cost;t.lvl++;burst(t.x,t.y,'#ffffff',14);sfx.upgrade();updateUI();}
+function sell(){const t=S.picked;if(!t)return;const back=Math.floor(t.spent*0.7);S.credits+=back;S.towers=S.towers.filter(x=>x!==t);S.picked=null;float(t.x,t.y-20,`Sold +${back}`,'#000080');sfx.place();updateUI();}
+cv.addEventListener('pointerdown',e=>{const{x,y}=toLocal(e);if(actx&&actx.state==='suspended')actx.resume();
+  if(S.mode==='title'){boot();return;}
+  if(S.mode==='ransom'){const b=(S.ransomBtns||[]).find(r=>x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h);if(b)b.id==='pay'?payRansom():b.id==='restore'?restoreBackup():refuseRansom();return;}
+  if(S.mode==='won'||S.mode==='lost')return;
+  if(S.mailOpen){S.mailOpen=false;return;}
+  if(S.openFile!==null){S.openFile=null;return;}
+  if(S.mail&&Math.abs(x-MAIL.x)<44&&y>MAIL.y-20&&y<MAIL.y+34){openLoveLetter();return;}
+  const fi=ICONS.findIndex(ic=>Math.abs(x-ic.x)<42&&y>ic.y-18&&y<ic.y+44);if(fi>=0){S.openFile=fi;S.picked=null;updateUI();sfx.tick();return;}
+  for(const p of S.packets){if(p.d<0)continue;const q=posAt(p.d);if(Math.hypot(q.x-x,q.y-y)<=p.r+7){p.kind==='good'?falsePositive(p):hit(p,1,null);return;}}
+  const onTower=S.towers.find(t=>Math.hypot(t.x-x,t.y-y)<=20);
+  if(onTower){S.picked=onTower===S.picked?null:onTower;updateUI();return;}
+  if(S.picked){S.picked=null;updateUI();return;}
+  const gx=snap(x),gy=snap(y),cost=TOWER[S.sel].cost;
+  if(!canPlace(gx,gy)){float(x,y,'Can’t place a tower here','#c00000');sfx.error();return;}
+  if(S.credits<cost){float(x,y,`Need ${cost-S.credits} more credits`,'#c00000');sfx.error();return;}
+  S.credits-=cost;S.towers.push({x:gx,y:gy,type:S.sel,cd:0,lvl:1,spent:cost});sfx.place();updateUI();});
+cv.addEventListener('pointermove',e=>{S.hover=toLocal(e);});
+cv.addEventListener('pointerleave',()=>{S.hover=null;});
+const $=id=>document.getElementById(id);
+const bHP=$('bHP'),sBK=$('sBK'),sEM=$('sEM'),sSI=$('sSI'),bFW=$('bFW'),bFL=$('bFL'),bRL=$('bRL'),bWave=$('bWave'),bSpd=$('bSpd'),bSnd=$('bSnd'),bRst=$('bRst'),pInfo=$('pInfo'),bUp=$('bUp'),bSell=$('bSell');
+function updateUI(){if(!S)return;
+  [[sBK,'backup'],[sEM,'mail'],[sSI,'siem']].forEach(([b,k])=>{const own=!!S.svc[k];b.disabled=own;b.textContent=own?`${SERVICES[k].name} ✓`:`${SERVICES[k].name} ${SERVICES[k].cost}`;b.classList.toggle('poor',!own&&S.credits<SERVICES[k].cost);});
+  [[bFW,'firewall'],[bFL,'filter'],[bRL,'limiter'],[bHP,'honeypot']].forEach(([b,k])=>{b.classList.toggle('active',S.sel===k);b.classList.toggle('poor',S.credits<TOWER[k].cost);});
+  bWave.disabled=S.mode!=='build';bWave.textContent=S.mode==='wave'?`Wave ${S.wave} in progress`:S.mode==='build'?`Start wave ${S.wave+1} of ${MAX_WAVE}`:'Start wave';
+  bSpd.textContent=`Speed ${S.speed}x`;bSnd.textContent=soundOn?'Sound on':'Sound off';
+  const t=S.picked;
+  if(t){pInfo.textContent=`${TOWER[t.type].name}, level ${t.lvl} of 3`;bUp.hidden=false;bSell.hidden=false;bUp.disabled=t.lvl>=3;bUp.textContent=t.lvl>=3?'Fully upgraded':`Upgrade for ${UP_COST[t.lvl-1]}`;bSell.textContent=`Sell for ${Math.floor(t.spent*0.7)}`;}
+  else{pInfo.textContent='Click a placed tower to upgrade or sell it.';bUp.hidden=true;bSell.hidden=true;}}
+function buyService(k){if(S.svc[k]||S.mode==='title')return;const sv=SERVICES[k];if(S.credits<sv.cost){float(W/2,H/2,`Need ${sv.cost-S.credits} more credits`,'#c00000');sfx.error();return;}
+  S.credits-=sv.cost;S.svc[k]=true;siemLog(`${sv.name} online`);float(W/2,H/2,`${sv.name} online`,'#000080',1.6);sfx.upgrade();
+  if(k==='mail'&&S.mail&&!S.mailQ){S.mailQ=true;float(150,440,'Email filter quarantined an attachment','#000080',2.2);siemLog('Attachment quarantined');}updateUI();}
+function choose(k){S.sel=k;S.picked=null;updateUI();}
+bFW.onclick=()=>choose('firewall');bFL.onclick=()=>choose('filter');bRL.onclick=()=>choose('limiter');bHP.onclick=()=>choose('honeypot');sBK.onclick=()=>buyService('backup');sEM.onclick=()=>buyService('mail');sSI.onclick=()=>buyService('siem');
+bWave.onclick=()=>startWave();
+bSpd.onclick=()=>{S.speed=S.speed===1?2:1;updateUI();};
+bSnd.onclick=()=>{soundOn=!soundOn;if(master)master.gain.value=soundOn?0.45:0;updateUI();};
+bRst.onclick=()=>{reset();if(actx){S.mode='build';}setDistortion(0);updateUI();};
+bUp.onclick=()=>upgrade();bSell.onclick=()=>sell();
+document.addEventListener('keydown',e=>{if(e.target!==document.body)return;const k=e.key.toLowerCase();
+  if(k==='1')choose('firewall');if(k==='2')choose('filter');if(k==='3')choose('limiter');if(k==='4')choose('honeypot');if(k==='u')upgrade();if(k==='f')bSpd.onclick();if(k==='escape'){S.picked=null;S.openFile=null;updateUI();}
+  if(e.code==='Space'){e.preventDefault();if(S.mode==='title')boot();else startWave();}});
+
+// ===== Drawing helpers: 90s beveled boxes and window title bars =====
+const UI='Tahoma,"MS Sans Serif","Microsoft Sans Serif",Arial,sans-serif';
+function bevel(x,y,w,h,inset,fill='#c0c0c0'){ctx.fillStyle=fill;ctx.fillRect(x,y,w,h);
+  const a=inset?'#808080':'#ffffff',b=inset?'#ffffff':'#000000',a2=inset?'#000000':'#dfdfdf',b2=inset?'#dfdfdf':'#808080';
+  ctx.fillStyle=a;ctx.fillRect(x,y,w,1);ctx.fillRect(x,y,1,h);ctx.fillStyle=b;ctx.fillRect(x,y+h-1,w,1);ctx.fillRect(x+w-1,y,1,h);
+  ctx.fillStyle=a2;ctx.fillRect(x+1,y+1,w-2,1);ctx.fillRect(x+1,y+1,1,h-2);ctx.fillStyle=b2;ctx.fillRect(x+1,y+h-2,w-2,1);ctx.fillRect(x+w-2,y+1,1,h-2);}
+function titleBar(x,y,w,txt,c){const g=ctx.createLinearGradient(x,0,x+w,0);g.addColorStop(0,mixC('#000080','#0a3a00',c));g.addColorStop(1,mixC('#1084d0','#4a9a00',c));ctx.fillStyle=g;ctx.fillRect(x,y,w,18);
+  ctx.fillStyle='#ffffff';ctx.font=`bold 11px ${UI}`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(txt,x+5,y+9.5);
+  bevel(x+w-17,y+2,15,14,false);ctx.strokeStyle='#000';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x+w-13,y+6);ctx.lineTo(x+w-6,y+12);ctx.moveTo(x+w-6,y+6);ctx.lineTo(x+w-13,y+12);ctx.stroke();}
+
+// ===== Drawing: teal desktop with folder icons, Matrix rain spreading from breaches, path, hospital network window =====
+const ICONS=[{x:60,y:190,l:'Patient records'},{x:60,y:300,l:'Lab results'},{x:60,y:410,l:'Pharmacy'}];
+function drawBackground(c){ctx.fillStyle='#008080';ctx.fillRect(0,0,W,H);
+  ICONS.forEach((ic,i)=>{const hp=S.files[i],dead=hp<=0,x=ic.x,y=ic.y;
+    if(dead){ctx.fillStyle='#061a04';ctx.fillRect(x-15,y-13,30,26);ctx.fillStyle='#9cff12';ctx.font='11px "Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(rg()+rg()+rg(),x,y);}
+    else{ctx.fillStyle='#ffd75e';ctx.fillRect(x-15,y-13,13,5);ctx.fillRect(x-15,y-9,30,22);ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.strokeRect(x-14.5,y-8.5,29,21);ctx.fillStyle='#fff3b0';ctx.fillRect(x-13,y-6,26,3);
+      if(hp<100){ctx.fillStyle='#1f8a00';ctx.font='bold 11px "Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='middle';for(let k=0;k<Math.ceil((100-hp)/15);k++)ctx.fillText(rg(),x-11+Math.random()*22,y-4+Math.random()*14);}}
+    ctx.font=`11px ${UI}`;ctx.textAlign='center';ctx.textBaseline='middle';const lab=dead?'?????????':ic.l,lw=ctx.measureText(lab).width+6;
+    if(S.openFile===i){ctx.fillStyle='#000080';ctx.fillRect(x-lw/2,y+19,lw,14);}
+    ctx.fillStyle=dead?'#9cff12':'#ffffff';ctx.fillText(lab,x,y+26);
+    ctx.fillStyle='#000';ctx.fillRect(x-20,y+36,40,6);ctx.fillStyle=mixC('#ffffff','#9cff12',1-hp/100);ctx.fillRect(x-19,y+37,38*hp/100,4);});
+  ctx.fillStyle=`rgba(3,14,5,${c*0.8})`;ctx.fillRect(0,0,W,H);}
+function colIntensity(x,c){let v=0.06+c*0.4;for(const s of S.spots){const d=Math.abs(x-s.x);if(d<s.r)v+=s.str*(1-d/s.r);}return Math.min(1,v);}
+function drawRain(c){ctx.font='14px "Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const col of RAIN){const I=colIntensity(col.x,c);for(let k=0;k<col.ch.length;k++){const y=col.y-k*16;if(y<-16||y>H+16)continue;const a=I*(1-k/col.ch.length);
+    const love=S.loveT>0&&(k+Math.floor(col.x))%3===0;ctx.fillStyle=love?`rgba(255,80,170,${Math.max(a,0.5)})`:k===0?`rgba(235,255,210,${a})`:mixC('#0b7a2a','#b6ff1f',c,a);ctx.fillText(love?'♥':col.ch[k],col.x,y);}}}
+function drawPath(c){ctx.save();ctx.lineJoin='miter';ctx.lineCap='butt';
+  tracePath();ctx.strokeStyle='#ffffff';ctx.lineWidth=36;ctx.stroke();
+  ctx.save();ctx.translate(-2,-2);tracePath();ctx.strokeStyle='#404040';ctx.lineWidth=34;ctx.stroke();ctx.restore();
+  tracePath();ctx.strokeStyle=mixC('#c0c0c0','#1a2a10',c);ctx.lineWidth=30;ctx.stroke();
+  tracePath();ctx.strokeStyle=mixC('#000080','#9cff12',c);ctx.lineWidth=2;ctx.setLineDash([4,8]);ctx.lineDashOffset=-time*40;ctx.stroke();ctx.restore();
+  bevel(4,72,64,20,false);ctx.fillStyle='#000';ctx.font=`11px ${UI}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Internet',36,82);}
+function ecg(p){if(p<26)return 0;if(p<29)return-(p-26)*4;if(p<32)return-12+(p-29)*7;if(p<35)return 9-(p-32)*3;return 0;}
+function drawNetwork(c){const x=850,y=196,w=104,h=214;bevel(x,y,w,h,false);titleBar(x+3,y+3,w-6,(S.congest||0)>0.3?'Overloaded':'Hospital net',c);
+  for(let i=0;i<3;i++){const sx=x+8,sy=y+28+i*60,sw=w-16,sh=50;const inf=S.mode==='lost'||c>(i+1)*0.28;
+    bevel(sx-2,sy-2,sw+4,sh+4,true);ctx.fillStyle='#000';ctx.fillRect(sx,sy,sw,sh);ctx.save();ctx.beginPath();ctx.rect(sx,sy,sw,sh);ctx.clip();
+    if(inf){ctx.fillStyle='#a8ff2a';ctx.font='10px "Courier New",monospace';ctx.textAlign='left';ctx.textBaseline='middle';for(let k=0;k<4;k++)ctx.fillText(rg()+rg()+rg()+rg()+rg()+rg()+rg(),sx+4,sy+8+k*11);}
+    else{ctx.strokeStyle='#00ff40';ctx.lineWidth=1.5;ctx.beginPath();for(let px=0;px<=sw;px+=2){const v=ecg((px+time*50)%56);px?ctx.lineTo(sx+px,sy+sh/2+v):ctx.moveTo(sx,sy+sh/2+v);}ctx.stroke();}
+    if(!inf&&(S.congest||0)>0.3&&Math.floor(time*3+i)%2){ctx.fillStyle='#000';ctx.fillRect(sx,sy,sw,sh);ctx.fillStyle='#ff9a00';ctx.font='bold 10px "Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('503',sx+sw/2,sy+sh/2-7);ctx.fillText('NO SERVICE',sx+sw/2,sy+sh/2+7);}
+    ctx.restore();}}
+
+// ===== Drawing: beveled tower buttons (brick firewall, funnel filter, hourglass rate limiter), packet chips, effects =====
+function drawTower(t,ghost,valid,picked){const def=TOWER[t.type],lvl=t.lvl||1,rng=def.range[lvl-1],x=t.x,y=t.y;ctx.save();
+  if(ghost||picked||t.type==='limiter'||t.type==='honeypot'){ctx.beginPath();ctx.arc(x,y,rng,0,7);
+    ctx.fillStyle=ghost?(valid?'rgba(255,255,255,0.15)':'rgba(255,0,0,0.18)'):(t.type==='limiter'||t.type==='honeypot')&&!picked?'rgba(255,255,0,0.07)':'rgba(255,255,255,0.12)';ctx.fill();
+    ctx.strokeStyle=ghost?(valid?'#ffffff':'#ff0000'):picked?'#ffffff':'rgba(255,255,0,0.55)';ctx.lineWidth=1;ctx.setLineDash([2,3]);ctx.stroke();ctx.setLineDash([]);}
+  if(ghost)ctx.globalAlpha=0.7;
+  bevel(x-17,y-17,34,34,false);ctx.strokeStyle='#000';ctx.lineWidth=1;
+  if(t.type==='firewall'){ctx.save();ctx.beginPath();ctx.rect(x-11,y-10,22,20);ctx.clip();ctx.fillStyle='#dfdfdf';ctx.fillRect(x-11,y-10,22,20);ctx.fillStyle='#a52a2a';
+    for(let r=0;r<4;r++){const by=y-10+r*5,off=r%2?5:0;for(let bx=x-16+off;bx<x+11;bx+=10)ctx.fillRect(bx,by,9,4);}ctx.restore();ctx.strokeRect(x-11.5,y-10.5,23,21);}
+  else if(t.type==='filter'){ctx.beginPath();ctx.moveTo(x-10,y-9);ctx.lineTo(x+10,y-9);ctx.lineTo(x+2,y+1);ctx.lineTo(x+2,y+10);ctx.lineTo(x-2,y+10);ctx.lineTo(x-2,y+1);ctx.closePath();ctx.fillStyle='#00a8a8';ctx.fill();ctx.stroke();}
+  else if(t.type==='honeypot'){ctx.fillStyle='#c08020';ctx.beginPath();ctx.ellipse(x,y+2,10,9,0,0,7);ctx.fill();ctx.stroke();ctx.fillStyle='#ffd040';ctx.fillRect(x-8,y-11,16,5);ctx.strokeRect(x-8.5,y-11.5,17,6);ctx.fillStyle='#ffe680';ctx.beginPath();ctx.ellipse(x,y+1,5,4,0,0,7);ctx.fill();}
+  else{ctx.beginPath();ctx.moveTo(x-8,y-10);ctx.lineTo(x+8,y-10);ctx.lineTo(x-8,y+10);ctx.lineTo(x+8,y+10);ctx.closePath();ctx.fillStyle='#e0c000';ctx.fill();ctx.stroke();ctx.fillRect(x-10,y-11,20,2);ctx.fillRect(x-10,y+9,20,2);}
+  if(!ghost)for(let i=0;i<lvl;i++){ctx.fillStyle='#000080';ctx.fillRect(x-11+i*8,y+21,6,6);ctx.strokeStyle='#ffffff';ctx.strokeRect(x-11.5+i*8,y+20.5,7,7);}
+  if(picked){ctx.strokeStyle='#000';ctx.setLineDash([1,2]);ctx.strokeRect(x-20.5,y-20.5,41,41);ctx.setLineDash([]);}
+  ctx.restore();}
+function drawPacket(p,c){if(p.d<0)return;const q=posAt(p.d);let x=q.x,y=q.y;const flick=p.kind==='sig'&&Math.sin(time*5+p.ph)>0.9-c*0.3;const toxic=p.kind==='port'||p.kind==='boss'||flick;if(toxic)x+=(Math.random()-0.5)*(p.kind==='boss'?3:2);
+  const s=Math.round(p.r*1.6),L=x-s/2,T=y-s/2;
+  if(p.slow<1){ctx.strokeStyle='#ffff00';ctx.lineWidth=1;ctx.setLineDash([2,2]);ctx.strokeRect(L-3.5,T-3.5,s+7,s+7);ctx.setLineDash([]);}
+  const [fill,hi,lo]=p.kind==='ddos'?['#ff9a00','#ffe0a0','#803c00']:p.kind==='tunnel'?['#a0a0a0','#ffffff','#404040']:toxic?['#9cff12','#e8ffa0','#1f4000']:['#ffffff','#ffffff','#808080'];
+  ctx.fillStyle=fill;ctx.fillRect(L,T,s,s);ctx.fillStyle=hi;ctx.fillRect(L,T,s,2);ctx.fillRect(L,T,2,s);ctx.fillStyle=lo;ctx.fillRect(L,T+s-2,s,2);ctx.fillRect(L+s-2,T,2,s);
+  ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.strokeRect(L-0.5,T-0.5,s+1,s+1);
+  if(p.flash>0){ctx.fillStyle=`rgba(255,255,255,${p.flash*5})`;ctx.fillRect(L,T,s,s);}
+  ctx.textAlign='center';ctx.textBaseline='middle';
+  if(p.kind==='tunnel'){ctx.strokeStyle='#000';ctx.fillStyle='#000';ctx.lineWidth=2;ctx.beginPath();ctx.arc(x,y-3,4,Math.PI,0);ctx.stroke();ctx.fillRect(x-5.5,y-3,11,8);
+    if(p.hp<p.maxHp){ctx.strokeStyle='#ffff00';ctx.setLineDash([2,2]);ctx.strokeRect(L-2.5,T-2.5,s+5,s+5);ctx.setLineDash([]);}}
+  else if(toxic){ctx.fillStyle='#0c1a00';ctx.font=`bold ${p.kind==='boss'?18:11}px "Courier New",monospace`;ctx.fillText(p.glyph,x,y+1);}
+  else if(p.kind==='ddos'){ctx.fillStyle='#000';ctx.fillRect(x-1.5,y-1.5,3,3);}
+  else{ctx.fillStyle='#000080';for(let i=0;i<3;i++)ctx.fillRect(x-s/4,y-s/4+i*s/4,s/2,1.5);}
+  if(p.kind==='boss'){const bw=60;bevel(x-bw/2,T-12,bw,7,true);ctx.fillStyle='#9cff12';ctx.fillRect(x-bw/2+1,T-11,(bw-2)*p.hp/p.maxHp,5);}
+  if(!p.label)return;ctx.font=`9px ${UI}`;const tw=ctx.measureText(p.label).width+6;ctx.fillStyle=toxic?'#000000':'#ffffe1';ctx.fillRect(x-tw/2,T+s+3,tw,12);ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.strokeRect(x-tw/2-0.5,T+s+2.5,tw+1,13);
+  ctx.fillStyle=toxic?'#9cff12':'#000000';ctx.fillText(p.label,x,T+s+9.5);}
+function drawEffects(){ctx.save();ctx.lineCap='butt';ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const b of S.beams){ctx.globalAlpha=b.life/0.15;ctx.strokeStyle=b.col;ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(b.x1,b.y1);ctx.lineTo(b.x2,b.y2);ctx.stroke();}
+  for(const p of S.parts){ctx.globalAlpha=Math.min(1,p.life*2);ctx.fillStyle=p.col;if(p.ch){ctx.font='11px "Courier New",monospace';ctx.fillText(p.ch,p.x,p.y);}else ctx.fillRect(p.x-2,p.y-2,4,4);}
+  ctx.restore();}
+
+// ===== Drawing: "System health" window with the face (light blue to toxic green, curious to hopeless), taskbar HUD, messages, dialogs =====
+function drawFace(c){const st=S.mode==='lost'?4:faceState(S.health);bevel(838,8,116,160,false);titleBar(841,11,110,'System health',c);
+  const x=844,y=34,w=104,h=80,cx=x+w/2,cy=y+h/2;bevel(x-2,y-2,w+4,h+4,true);ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();
+  if(st>=3&&Math.random()<0.12*(st-2))ctx.translate((Math.random()-0.5)*6,0);
+  const g=ctx.createLinearGradient(0,y,0,y+h);g.addColorStop(0,mixC('#a6caf0','#d8ff3c',c));g.addColorStop(1,mixC('#3a6ea5','#1a3a05',c));ctx.fillStyle=g;ctx.fillRect(x-4,y,w+8,h);
+  if(st>=2){ctx.font='11px "Courier New",monospace';ctx.fillStyle=`rgba(10,40,0,${0.15*(st-1)})`;for(let i=0;i<6*(st-1);i++)ctx.fillText(rg(),x+Math.random()*w,y+Math.random()*h);}
+  const ink='#000000';ctx.strokeStyle=ink;ctx.fillStyle=ink;ctx.lineWidth=3.5;ctx.lineCap='round';const ex=18,ey=cy-6;
+  const eye=(px,py,r)=>{ctx.fillStyle=ink;ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill();ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(px-r*0.35,py-r*0.35,r*0.35,0,7);ctx.fill();ctx.fillStyle=ink;};
+  const line=(x1,y1,x2,y2)=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();};
+  if(st===0){eye(cx-ex,ey,6);eye(cx+ex,ey,6);line(cx-ex-8,ey-15,cx-ex+7,ey-10);line(cx+ex-7,ey-10,cx+ex+8,ey-15);ctx.beginPath();ctx.arc(cx,cy+6,14,Math.PI*0.15,Math.PI*0.85);ctx.stroke();}
+  else if(st===1){eye(cx-ex,ey,6);eye(cx+ex,ey,6);line(cx-ex-8,ey-12,cx-ex+7,ey-12);line(cx+ex-7,ey-12,cx+ex+8,ey-12);ctx.beginPath();ctx.arc(cx,cy+8,11,Math.PI*0.3,Math.PI*0.7);ctx.stroke();}
+  else if(st===2){eye(cx-ex,ey+2,4);eye(cx+ex,ey+2,4);line(cx-ex-7,ey-3,cx-ex+6,ey-1);line(cx+ex-6,ey-1,cx+ex+7,ey-3);line(cx-ex-8,ey-11,cx-ex+7,ey-9);line(cx+ex-7,ey-9,cx+ex+8,ey-11);line(cx-10,cy+18,cx+10,cy+18);}
+  else if(st===3){eye(cx-ex,ey+1,5);eye(cx+ex,ey+1,5);line(cx-ex-8,ey-8,cx-ex+6,ey-13);line(cx+ex-6,ey-13,cx+ex+8,ey-8);ctx.beginPath();ctx.arc(cx,cy+27,11,Math.PI*1.2,Math.PI*1.8);ctx.stroke();
+    ctx.fillStyle='#4fd8ff';ctx.beginPath();ctx.ellipse(cx-ex-1,ey+11+(time*18)%10,2.5,4,0,0,7);ctx.fill();}
+  else{line(cx-ex-6,ey,cx-ex+6,ey+3);line(cx+ex-6,ey+3,cx+ex+6,ey);line(cx-ex-9,ey-6,cx-ex+6,ey-14);line(cx+ex-6,ey-14,cx+ex+9,ey-6);ctx.beginPath();ctx.arc(cx,cy+31,13,Math.PI*1.18,Math.PI*1.82);ctx.stroke();}
+  ctx.restore();
+  const lit=Math.ceil(S.health/20);bevel(x-2,y+h+6,w+4,14,true,'#ffffff');for(let i=0;i<5;i++){if(i<lit){ctx.fillStyle=mixC('#000080','#4a9a00',c);ctx.fillRect(x+1+i*20.6,y+h+9,18,8);}}
+  ctx.font=`11px ${UI}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#000';ctx.fillText(`${FACE_NAMES[st]}, ${Math.round(S.health)}%`,cx,y+h+32);}
+const FILE_DATA=[
+ ['Patient #A-1042   Room 3B   Stable','Patient #A-1057   Room 4A   Observation','Patient #A-1063   ICU 2     Critical','Patient #A-1071   Room 1C   Discharge today','Patient #A-1088   Room 5D   Stable','Patient #A-1094   ER 6      Admitted'],
+ ['Order #L-2201   CBC panel       Normal','Order #L-2207   Glucose         High','Order #L-2215   Blood culture   Pending','Order #L-2219   Chest X-ray     Reviewed','Order #L-2224   Potassium       Normal','Order #L-2230   Troponin        Pending'],
+ ['Rx #P-310   Amoxicillin 500 mg   Ready','Rx #P-314   Insulin glargine    Filled','Rx #P-322   Heparin drip        Due 14:00','Rx #P-329   Albuterol inhaler   Ready','Rx #P-333   Morphine 2 mg       Locked','Rx #P-340   Saline 1 L          Stocked']];
+function noiseAt(i,k,j){const v=Math.sin(i*3.1+k*12.9898+j*78.233)*43758.5453;return v-Math.floor(v);}
+function drawFileWindow(){const i=S.openFile;if(i===null)return;const hp=S.files[i],f=hp<=0?1:(1-hp/100)*0.9,x=210,y=120,w=540,h=250;
+  bevel(x,y,w,h,false);titleBar(x+3,y+3,w-6,`${ICONS[i].l}${hp<=0?' (unreadable)':''}`,1-hp/100);bevel(x+8,y+28,w-16,h-62,true,'#ffffff');
+  ctx.font='14px "Courier New",monospace';ctx.textAlign='left';ctx.textBaseline='middle';const cw=ctx.measureText('M').width;
+  FILE_DATA[i].forEach((l,k)=>{for(let j=0;j<l.length;j++){const bad=l[j]!==' '&&noiseAt(i,k,j)<f;ctx.fillStyle=bad?'#1f8a00':'#000000';ctx.fillText(bad?'#$%&@01<>/=+*?'[(j*7+k*3+Math.floor(time*6))%14]:l[j],x+20+j*cw,y+48+k*27);}});
+  ctx.font=`11px ${UI}`;ctx.fillStyle='#000';ctx.fillText(`Integrity ${Math.round(hp)}%      Click anywhere to close`,x+12,y+h-17);}
+function drawRansom(){const R=S.ransom;if(S.mode!=='ransom'||!R)return;ctx.save();ctx.fillStyle='rgba(20,0,0,0.8)';ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='rgba(255,40,40,0.25)';ctx.font='14px "Courier New",monospace';ctx.textAlign='center';ctx.textBaseline='middle';for(let i=0;i<40;i++)ctx.fillText(Math.random()<0.5?'$':'#',Math.random()*W,Math.random()*H);
+  const a=R.amt,after=S.credits-a,w=640,h=330,x=(W-w)/2,y=(H-h)/2-10;bevel(x,y,w,h,false);
+  const g=ctx.createLinearGradient(x,0,x+w,0);g.addColorStop(0,'#800000');g.addColorStop(1,'#e01010');ctx.fillStyle=g;ctx.fillRect(x+3,y+3,w-6,18);
+  ctx.fillStyle='#fff';ctx.font=`bold 11px ${UI}`;ctx.textAlign='left';ctx.fillText('Files encrypted',x+8,y+12.5);
+  bevel(x+10,y+30,w-20,h-40,true,'#000000');
+  const lx=x+70,ly=y+92;ctx.strokeStyle='#ff3030';ctx.lineWidth=7;ctx.beginPath();ctx.arc(lx,ly-22,18,Math.PI,0);ctx.stroke();ctx.fillStyle='#ff3030';ctx.fillRect(lx-28,ly-22,56,46);ctx.fillStyle='#000';ctx.beginPath();ctx.arc(lx,ly-4,6,0,7);ctx.fill();ctx.fillRect(lx-2.5,ly-2,5,14);
+  ctx.textAlign='left';ctx.fillStyle='#ff3030';ctx.font='bold 22px "Courier New",monospace';ctx.fillText('YOUR FILES ARE ENCRYPTED',x+120,y+62);
+  ctx.font='14px "Courier New",monospace';ctx.fillStyle='#ffffff';
+  ctx.fillText('Ransomware reached the hospital network.',x+120,y+92);
+  ctx.fillText('Patient records, lab results and pharmacy are locked.',x+120,y+114);
+  ctx.fillText(`Ransom: ${a} credits.   You have: ${S.credits}.`,x+120,y+136);
+  ctx.fillStyle=after<0?'#ffb000':'#bbbbbb';ctx.fillText(after<0?`Paying puts you ${-after} in debt. No building until repaid.`:`Paying leaves you ${after} credits.`,x+120,y+158);
+  const left=Math.max(0,R.secs-Math.floor(R.t)),hh=String(Math.floor(left/3600)).padStart(2,'0'),mm=String(Math.floor(left/60)%60).padStart(2,'0'),ss=String(left%60).padStart(2,'0');
+  ctx.fillStyle=Math.floor(time*2)%2?'#ff3030':'#ffb000';ctx.font='bold 30px "Courier New",monospace';ctx.textAlign='center';ctx.fillText(`${hh}:${mm}:${ss}`,W/2,y+202);
+  ctx.fillStyle='#bbbbbb';ctx.font='12px "Courier New",monospace';ctx.fillText(S.svc.backup?'Restoring is free but pauses defenses 5 seconds, and backups can be incomplete.':'Paying funds criminals, and the key doesn’t always work.',W/2,y+236);
+  const bk=S.svc.backup,bw=bk?180:200,bh=30,by=y+h-58;S.ransomBtns=bk?[{id:'pay',x:W/2-bw*1.5-12,y:by,w:bw,h:bh,t:`Pay ${a} credits`},{id:'restore',x:W/2-bw/2,y:by,w:bw,h:bh,t:'Restore from backup'},{id:'refuse',x:W/2+bw/2+12,y:by,w:bw,h:bh,t:'Refuse and shut down'}]:[{id:'pay',x:W/2-bw-12,y:by,w:bw,h:bh,t:`Pay ${a} credits`},{id:'refuse',x:W/2+12,y:by,w:bw,h:bh,t:'Refuse and shut down'}];
+  for(const r of S.ransomBtns){bevel(r.x,r.y,r.w,r.h,false);ctx.fillStyle='#000';ctx.font=`bold 12px ${UI}`;ctx.textAlign='center';ctx.fillText(r.t,r.x+r.w/2,r.y+r.h/2);}
+  ctx.restore();}
+function drawMail(){if(!S.mail||S.mode==='title')return;const {x,y}=MAIL;ctx.save();
+  if(S.mailQ){ctx.globalAlpha=0.75;}
+  ctx.fillStyle='#ffffff';ctx.beginPath();ctx.moveTo(x-12,y-15);ctx.lineTo(x+6,y-15);ctx.lineTo(x+12,y-9);ctx.lineTo(x+12,y+15);ctx.lineTo(x-12,y+15);ctx.closePath();ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#000080';for(let i=0;i<4;i++)ctx.fillRect(x-8,y-6+i*5,16,1.5);ctx.fillStyle='#ff4fa0';ctx.font='12px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('♥',x+7,y+10);
+  ctx.globalAlpha=1;if(S.mailQ){ctx.strokeStyle='#c00000';ctx.lineWidth=3;ctx.beginPath();ctx.arc(x,y,17,0,7);ctx.moveTo(x-12,y+12);ctx.lineTo(x+12,y-12);ctx.stroke();}
+  ctx.font=`11px ${UI}`;ctx.fillStyle='#ffffff';ctx.fillText(S.mailQ?'LOVE-LETTER-FOR-YOU.TXT.vbs':'LOVE-LETTER-FOR-YOU.TXT',x,y+27);if(S.mailQ){ctx.fillStyle='#ffb0b0';ctx.fillText('(quarantined)',x,y+41);}ctx.restore();}
+function drawLoveWindow(){if(!S.mailOpen)return;const x=200,y=110,w=560,h=290;ctx.save();bevel(x,y,w,h,false);
+  if(S.mailOpen==='q'){ctx.fillStyle='#000080';ctx.fillRect(x+3,y+3,w-6,18);ctx.fillStyle='#fff';ctx.font=`bold 11px ${UI}`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Email filter - Quarantine',x+8,y+12.5);
+    ctx.fillStyle='#008000';ctx.font=`bold 14px ${UI}`;ctx.fillText('Blocked: LOVE-LETTER-FOR-YOU.TXT.vbs',x+14,y+44);ctx.fillStyle='#000';ctx.font=`12px ${UI}`;
+    ['Subject: ILOVEYOU','The filter saw the real extension, .vbs, which is a script, not a text file.','No files were touched and the worm never spread.','','Easter egg: ILOVEYOU was a real worm in May 2000. Windows hid known file','extensions, so the script looked like a harmless .TXT letter. Opening it','overwrote files and emailed itself to everyone in the address book.'].forEach((l,i)=>ctx.fillText(l,x+14,y+74+i*21));
+    ctx.fillStyle='#808080';ctx.fillText('Click anywhere to close',x+14,y+h-14);ctx.restore();return;}
+  ctx.fillStyle='#000080';ctx.fillRect(x+3,y+3,w-6,18);ctx.fillStyle='#fff';ctx.font=`bold 11px ${UI}`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('ILOVEYOU - Message',x+8,y+12.5);
+  ctx.fillStyle='#000';ctx.font=`12px ${UI}`;ctx.fillText('From:   a coworker',x+14,y+36);ctx.fillText('Subject:   ILOVEYOU',x+14,y+54);
+  bevel(x+10,y+66,w-20,72,true,'#ffffff');ctx.fillStyle='#000';ctx.font='13px "Courier New",monospace';ctx.fillText('kindly check the attached LOVELETTER coming from me.',x+20,y+86);
+  ctx.fillText('Attachment: LOVE-LETTER-FOR-YOU.TXT',x+20,y+112);ctx.fillStyle='#c00000';ctx.fillText('.vbs',x+20+ctx.measureText('Attachment: LOVE-LETTER-FOR-YOU.TXT').width,y+112);
+  ctx.fillStyle='#c00000';ctx.font=`bold 13px ${UI}`;ctx.fillText('You opened ILOVEYOU. Every file lost 25% and the worm mailed itself onward.',x+14,y+162);
+  ctx.fillStyle='#000';ctx.font=`12px ${UI}`;
+  ['Easter egg: ILOVEYOU was a real worm in May 2000. Windows hid known file','extensions, so the .vbs script looked like a harmless .TXT letter. Opening it','overwrote files and emailed itself to everyone in the address book.','Lesson: check the full file name before opening an attachment.'].forEach((l,i)=>ctx.fillText(l,x+14,y+188+i*19));
+  ctx.fillStyle='#808080';ctx.fillText('Click anywhere to close',x+14,y+h-14);ctx.restore();}
+function drawSiem(){if(!S.svc.siem)return;const x=838,y=416,w=116,h=112;ctx.save();bevel(x,y,w,h,false);titleBar(x+3,y+3,w-6,'SIEM',0);bevel(x+5,y+24,w-10,h-29,true,'#ffffff');
+  const q=S.mode==='wave'?S.queue.concat(S.packets.map(p=>p.kind)):(S.nextQ||[]);const bad=q.filter(k=>k!=='good'&&k!=='ddos').length;
+  ctx.font=`bold 9px ${UI}`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillStyle='#000080';ctx.fillText(S.mode==='wave'?'Left this wave':'Next wave',x+9,y+32);
+  ctx.font=`9px ${UI}`;ctx.fillStyle='#000';ctx.fillText(`Bad ${bad}  Good ${q.filter(k=>k==='good').length}`,x+9,y+43);
+  ctx.fillStyle=q.includes('ddos')||q.includes('boss')?'#c00000':'#008000';ctx.fillText(q.includes('boss')?'Ransomware expected':q.includes('ddos')?'DDoS expected':'No major attack',x+9,y+54);
+  ctx.fillStyle='#000';S.siem.slice(-4).forEach((m,i)=>{let t=m;while(ctx.measureText(t).width>w-18&&t.length>3)t=t.slice(0,-2);if(t!==m)t=t.slice(0,-1)+'…';ctx.fillText(t,x+9,y+68+i*11);});ctx.restore();}
+function drawHUD(){const y=H-28;bevel(0,y,W,28,false);bevel(3,y+3,86,22,false);ctx.fillStyle='#008080';ctx.fillRect(9,y+8,12,12);ctx.fillStyle='#000';ctx.font=`bold 12px ${UI}`;ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('Guardian',26,y+14);
+  bevel(95,y+3,W-98,22,true);ctx.font=`12px ${UI}`;ctx.fillStyle='#000';ctx.fillText(`Wave ${S.wave} of ${MAX_WAVE}     Credits ${S.credits}${S.credits<0?' (debt)':''}     Score ${S.score}     Placing: ${TOWER[S.sel].name}${Object.keys(S.svc).length?'     Services: '+Object.keys(S.svc).map(k=>SERVICES[k].name).join(', '):''}`,104,y+14);}
+function drawTexts(){ctx.save();ctx.font=`bold 13px ${UI}`;ctx.textAlign='center';ctx.textBaseline='middle';
+  for(const t of S.texts){ctx.globalAlpha=Math.min(1,t.life/t.max*2);const tw=ctx.measureText(t.txt).width+12;ctx.fillStyle='#ffffe1';ctx.fillRect(t.x-tw/2,t.y-9,tw,18);ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.strokeRect(t.x-tw/2-0.5,t.y-9.5,tw+1,19);ctx.fillStyle=t.col;ctx.fillText(t.txt,t.x,t.y+0.5);}ctx.restore();}
+function card(title,lines,dark){ctx.save();ctx.textBaseline='middle';
+  if(dark){ctx.fillStyle='#0000aa';ctx.fillRect(0,0,W,H);ctx.font='16px "Lucida Console","Courier New",monospace';ctx.textAlign='center';
+    const t=` ${title} `,tw=ctx.measureText(t).width;ctx.fillStyle='#aaaaaa';ctx.fillRect(W/2-tw/2-4,150,tw+8,24);ctx.fillStyle='#0000aa';ctx.fillText(t,W/2,163);
+    ctx.fillStyle='#ffffff';lines.forEach((l,i)=>ctx.fillText(l,W/2,220+i*32));
+    ctx.fillStyle='rgba(156,255,18,0.45)';for(let i=0;i<30;i++)ctx.fillText(rg(),Math.random()*W,Math.random()*H);ctx.restore();return;}
+  ctx.fillStyle='rgba(0,0,0,0.25)';ctx.fillRect(0,0,W,H);
+  const w=600,h=60+lines.length*24,x=(W-w)/2,y=(H-h)/2;bevel(x,y,w,h,false);titleBar(x+3,y+3,w-6,title,0);
+  ctx.beginPath();ctx.arc(x+38,y+52,16,0,7);ctx.fillStyle='#0000ff';ctx.fill();ctx.strokeStyle='#000';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 20px Georgia,"Times New Roman",serif';ctx.textAlign='center';ctx.fillText('i',x+38,y+53);
+  ctx.fillStyle='#000';ctx.font=`13px ${UI}`;ctx.textAlign='left';lines.forEach((l,i)=>ctx.fillText(l,x+70,y+44+i*24));ctx.restore();}
+
+function draw(){const c=corr();ctx.save();if(S.shake>0)ctx.translate((Math.random()-0.5)*12*S.shake,(Math.random()-0.5)*12*S.shake);
+  drawBackground(c);drawRain(c);drawPath(c);drawNetwork(c);
+  for(const t of S.towers)drawTower(t,false,true,t===S.picked);
+  if(S.hover&&!S.picked&&S.openFile===null&&!ICONS.some(ic=>Math.abs(S.hover.x-ic.x)<42&&S.hover.y>ic.y-18&&S.hover.y<ic.y+44)&&(S.mode==='build'||S.mode==='wave')&&!S.towers.some(t=>Math.hypot(t.x-S.hover.x,t.y-S.hover.y)<=20)){const gx=snap(S.hover.x),gy=snap(S.hover.y);drawTower({x:gx,y:gy,type:S.sel,lvl:1},true,canPlace(gx,gy)&&S.credits>=TOWER[S.sel].cost,false);}
+  for(const p of S.packets)drawPacket(p,c);
+  drawEffects();drawFace(c);drawHUD();drawMail();drawSiem();if(S.restoreT>0){ctx.save();ctx.fillStyle='rgba(0,0,128,0.18)';ctx.fillRect(0,0,W,H-28);ctx.fillStyle='#ffffff';ctx.font=`bold 16px ${UI}`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(`Restoring from backup... ${Math.ceil(S.restoreT)}`,W/2,40);ctx.restore();}drawFileWindow();drawLoveWindow();drawTexts();ctx.restore();
+  drawRansom();
+  if(S.mode==='title')card('Packet Guardian',['You guard a hospital’s files: patient records, lab results and pharmacy.','Stop infected packets to earn credits, then build and upgrade defenses.','Firewalls stop bad ports. Filters catch disguised malware and open tunnels.','Rate limiters slow traffic and drop DDoS floods. Survive 6 waves.','Each breach corrupts a file. Click a folder to open it and see the damage.','Click to boot up']);
+  if(S.mode==='won')card('Network secured',[`Score ${S.score}`,`Bad packets stopped: ${S.blocked}     Good packets delivered: ${S.delivered}`,`False positives: ${S.falsePos}     Ransoms paid: ${S.ransomsPaid||0} (keys failed: ${S.keysFailed||0})     Restores failed: ${S.restoresFailed||0}`,'Press Restart to play again']);
+  if(S.mode==='lost'&&!S.ransom)card(S.lostReason==='refused'?'Hospital shut down':'Network corrupted',[S.lostReason==='refused'?'You refused the ransom. The files stay encrypted.':S.lostReason==='love'?'A love letter finished off the last of your files.':'Every patient file is corrupted.',`Waves survived: ${Math.max(0,S.wave-1)} of ${MAX_WAVE}     Score ${S.score}`,`False positives: ${S.falsePos}`,'Press Restart to try again'],true);
+  }
+
+// ===== Main loop (fast-forward runs extra update steps) =====
+let last=performance.now();
+function loop(now){const dt=Math.min(0.05,(now-last)/1000);last=now;for(let i=0;i<S.speed;i++)update(dt);draw();tickMusic();requestAnimationFrame(loop);}
+reset();requestAnimationFrame(loop);
+</script>
+</body>
+</html>
+
+</body></html>
