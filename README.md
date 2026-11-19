@@ -4,7 +4,9 @@
 
 A tower defense game where you protect a hospital's network. Infected packets travel from the Internet toward the hospital's files, and you build security tools to stop them. It is styled as a 90s desktop that gets taken over by Matrix-style code as you lose.
 
-**Run it:** download the `.html` file from this repo and open it in any modern browser. No install or server needed.
+**Play it:** [Packet Guardian on GitHub Pages](https://mo200909.github.io/Packet-Guardian-Network-Defense-Game/Packet%20Guardian_%20Hospital%20Network%20Defense%20(1).html)
+
+**Or run it locally:** download the `.html` file from this repo and open it in any modern browser. No install or server needed.
 
 ## How to play
 
